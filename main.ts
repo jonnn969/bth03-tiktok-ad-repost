@@ -39,9 +39,27 @@ if (
   typeof address !== 'object' ||
   address === null ||
   typeof (address as { url?: unknown }).url !== 'string' ||
-  !(address as { url: string }).url.startsWith('https://www.tiktok.com/')
+  (address as { url: string }).url.length === 0
 ) {
-  console.error('VIDEO.json must hold an object with a tiktok.com video url');
+  console.error('VIDEO.json must hold an object with a non-empty url string');
+  process.exit(1);
+}
+
+// Strict shape check: a TikTok video address must be exactly
+// https://www.tiktok.com/@<handle>/video/<digits> — handle non-empty,
+// id all digits. This matters because a merely TikTok-looking string
+// (a profile page, a short link, a URL with extra path/query, a typo)
+// would sail past a prefix check here and then be refused by the
+// server's entry_link check, wasting the submission; catching the
+// wrong shape locally, before anything is handed in, is the cheap
+// place to fail.
+const url = (address as { url: string }).url;
+const TIKTOK_VIDEO_URL = /^https:\/\/www\.tiktok\.com\/@[^/\s]+\/video\/\d+$/;
+if (!TIKTOK_VIDEO_URL.test(url)) {
+  console.error(
+    `VIDEO.json url has the wrong shape: ${url}\n` +
+      'expected https://www.tiktok.com/@<handle>/video/<digits>',
+  );
   process.exit(1);
 }
 
